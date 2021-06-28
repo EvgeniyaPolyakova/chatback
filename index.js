@@ -20,13 +20,14 @@ io.on("connection", (socket) => {
     connections.push(socket.id);
     console.log(connections.length);
 
+    
     socket.on("message", (data) => {
-      io.emit('message', data)
+      const messageSocket = { id: socket.id, mes: data };
+      io.emit("message", messageSocket);
     });
   } else {
     console.log("Чат переполнен!", socket.id);
     socket.disconnect();
-    
   }
 
   socket.on("disconnect", (socket) => {
