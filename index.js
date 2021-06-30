@@ -1,14 +1,44 @@
-const e = require("cors");
+const cors = require("cors");
 const http = require("http");
 const socketIo = require("socket.io");
-let fs = require("fs");
+const mongoose = require("mongoose");
+const express = require("express");
+const Message = require("./models/message");
 
-const server = http.createServer();
+const app = express();
+
+app.use(cors());
+app.use(express.json);
+
+const server = http.createServer(app);
 
 const connections = [];
 
-server.listen(3001, () => {
-  console.log("server started");
+server.listen(3001, async () => {
+  try {
+    await mongoose.connect(
+      "mongodb+srv://admin:SjBdf2jbaEmTXmUw@cluster0.h2jsh.mongodb.net/myFirstDatabase?retryWrites=true&w=majority",
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        useFindAndModify: false,
+        useCreateIndex: true,
+      }
+    );
+  } catch (e) {
+    console.log("failed");
+  }
+});
+
+app.post("/", async (req, res) => {
+  try {
+    const { message } = req.body;
+    const messages = new Message({ message });
+    await messages.save();
+    res.status(200).send();
+  } catch (e) {
+    res.status(500).send();
+  }
 });
 
 const io = socketIo(server, {
@@ -17,9 +47,7 @@ const io = socketIo(server, {
 
 io.on("connection", (socket) => {
   if (connections.length < 2) {
-    console.log("Успешно", socket.id);
     connections.push(socket.id);
-    console.log(connections.length);
 
     socket.on("message", (data) => {
       const messageSocket = { id: socket.id, mes: data };
@@ -29,11 +57,11 @@ io.on("connection", (socket) => {
     socket.on("starttyping", () => {
       socket.broadcast.emit("starttyping");
     });
-    socket.on("endttyping", () => {
+    socket.on("endtyping", () => {
       socket.broadcast.emit("endtyping");
     });
   } else {
-    const data = socket.id
+    const data = socket.id;
     io.emit("overflow", data);
     socket.disconnect();
   }
